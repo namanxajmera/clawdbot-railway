@@ -1167,6 +1167,7 @@ const AgentDefaultsSchema = z
         }),
       )
       .optional(),
+    runtime: z.union([z.literal("pi"), z.literal("vercel")]).optional(),
     workspace: z.string().optional(),
     skipBootstrap: z.boolean().optional(),
     userTimezone: z.string().optional(),

@@ -1589,6 +1589,8 @@ export type AgentDefaultsConfig = {
   imageModel?: AgentModelListConfig;
   /** Model catalog with optional aliases (full provider/model keys). */
   models?: Record<string, AgentModelEntryConfig>;
+  /** Embedded agent runtime implementation. */
+  runtime?: "pi" | "vercel";
   /** Agent working directory (preferred). Used as the default cwd for agent runs. */
   workspace?: string;
   /** Skip bootstrap (BOOTSTRAP.md creation, etc.) for pre-configured deployments. */

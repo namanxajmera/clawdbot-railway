@@ -146,6 +146,7 @@ const FIELD_LABELS: Record<string, string> = {
   "agents.defaults.model.fallbacks": "Model Fallbacks",
   "agents.defaults.imageModel.primary": "Image Model",
   "agents.defaults.imageModel.fallbacks": "Image Model Fallbacks",
+  "agents.defaults.runtime": "Embedded Runtime",
   "agents.defaults.humanDelay.mode": "Human Delay Mode",
   "agents.defaults.humanDelay.minMs": "Human Delay Min (ms)",
   "agents.defaults.humanDelay.maxMs": "Human Delay Max (ms)",
@@ -273,6 +274,8 @@ const FIELD_HELP: Record<string, string> = {
     "Optional image model (provider/model) used when the primary model lacks image input.",
   "agents.defaults.imageModel.fallbacks":
     "Ordered fallback image models (provider/model).",
+  "agents.defaults.runtime":
+    "Embedded agent runtime implementation (pi or vercel).",
   "agents.defaults.cliBackends":
     "Optional CLI backends for text-only fallback (claude-cli, etc.).",
   "agents.defaults.humanDelay.mode":

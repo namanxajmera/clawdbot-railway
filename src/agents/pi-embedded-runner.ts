@@ -64,6 +64,16 @@ import {
   DEFAULT_MODEL,
   DEFAULT_PROVIDER,
 } from "./defaults.js";
+import type { EmbeddedRunHandle } from "./embedded-run-state.js";
+import {
+  abortEmbeddedRun,
+  isEmbeddedRunActive,
+  isEmbeddedRunStreaming,
+  queueEmbeddedRunMessage,
+  registerEmbeddedRun,
+  unregisterEmbeddedRun,
+  waitForEmbeddedRunEnd,
+} from "./embedded-run-state.js";
 import { FailoverError, resolveFailoverStatus } from "./failover-error.js";
 import {
   ensureAuthProfileStore,
@@ -131,6 +141,7 @@ import {
 import { buildAgentSystemPrompt } from "./system-prompt.js";
 import { buildToolSummaryMap } from "./tool-summaries.js";
 import { normalizeUsage, type UsageLike } from "./usage.js";
+import { runEmbeddedVercelAgent } from "./vercel-sdk-runner.js";
 import {
   filterBootstrapFilesForSession,
   loadWorkspaceBootstrapFiles,
@@ -407,12 +418,7 @@ export type EmbeddedPiCompactResult = {
   };
 };
 
-type EmbeddedPiQueueHandle = {
-  queueMessage: (text: string) => Promise<void>;
-  isStreaming: () => boolean;
-  isCompacting: () => boolean;
-  abort: () => void;
-};
+type EmbeddedPiQueueHandle = EmbeddedRunHandle;
 
 const log = createSubsystemLogger("agent/embedded");
 const GOOGLE_TURN_ORDERING_CUSTOM_TYPE = "google-turn-ordering-bootstrap";
@@ -614,13 +620,6 @@ export function getDmHistoryLimitFromSessionKey(
       return undefined;
   }
 }
-
-const ACTIVE_EMBEDDED_RUNS = new Map<string, EmbeddedPiQueueHandle>();
-type EmbeddedRunWaiter = {
-  resolve: (ended: boolean) => void;
-  timer: NodeJS.Timeout;
-};
-const EMBEDDED_RUN_WAITERS = new Map<string, Set<EmbeddedRunWaiter>>();
 
 // ============================================================================
 // SessionManager Pre-warming Cache
@@ -887,69 +886,26 @@ export function queueEmbeddedPiMessage(
   sessionId: string,
   text: string,
 ): boolean {
-  const handle = ACTIVE_EMBEDDED_RUNS.get(sessionId);
-  if (!handle) return false;
-  if (!handle.isStreaming()) return false;
-  if (handle.isCompacting()) return false;
-  void handle.queueMessage(text);
-  return true;
+  return queueEmbeddedRunMessage(sessionId, text);
 }
 
 export function abortEmbeddedPiRun(sessionId: string): boolean {
-  const handle = ACTIVE_EMBEDDED_RUNS.get(sessionId);
-  if (!handle) return false;
-  handle.abort();
-  return true;
+  return abortEmbeddedRun(sessionId);
 }
 
 export function isEmbeddedPiRunActive(sessionId: string): boolean {
-  return ACTIVE_EMBEDDED_RUNS.has(sessionId);
+  return isEmbeddedRunActive(sessionId);
 }
 
 export function isEmbeddedPiRunStreaming(sessionId: string): boolean {
-  const handle = ACTIVE_EMBEDDED_RUNS.get(sessionId);
-  if (!handle) return false;
-  return handle.isStreaming();
+  return isEmbeddedRunStreaming(sessionId);
 }
 
 export function waitForEmbeddedPiRunEnd(
   sessionId: string,
   timeoutMs = 15_000,
 ): Promise<boolean> {
-  if (!sessionId || !ACTIVE_EMBEDDED_RUNS.has(sessionId))
-    return Promise.resolve(true);
-  return new Promise((resolve) => {
-    const waiters = EMBEDDED_RUN_WAITERS.get(sessionId) ?? new Set();
-    const waiter: EmbeddedRunWaiter = {
-      resolve,
-      timer: setTimeout(
-        () => {
-          waiters.delete(waiter);
-          if (waiters.size === 0) EMBEDDED_RUN_WAITERS.delete(sessionId);
-          resolve(false);
-        },
-        Math.max(100, timeoutMs),
-      ),
-    };
-    waiters.add(waiter);
-    EMBEDDED_RUN_WAITERS.set(sessionId, waiters);
-    if (!ACTIVE_EMBEDDED_RUNS.has(sessionId)) {
-      waiters.delete(waiter);
-      if (waiters.size === 0) EMBEDDED_RUN_WAITERS.delete(sessionId);
-      clearTimeout(waiter.timer);
-      resolve(true);
-    }
-  });
-}
-
-function notifyEmbeddedRunEnded(sessionId: string) {
-  const waiters = EMBEDDED_RUN_WAITERS.get(sessionId);
-  if (!waiters || waiters.size === 0) return;
-  EMBEDDED_RUN_WAITERS.delete(sessionId);
-  for (const waiter of waiters) {
-    clearTimeout(waiter.timer);
-    waiter.resolve(true);
-  }
+  return waitForEmbeddedRunEnd(sessionId, timeoutMs);
 }
 
 export function resolveEmbeddedSessionLane(key: string) {
@@ -1404,6 +1360,10 @@ export async function runEmbeddedPiAgent(params: {
   ownerNumbers?: string[];
   enforceFinalTag?: boolean;
 }): Promise<EmbeddedPiRunResult> {
+  const runtime = params.config?.agents?.defaults?.runtime ?? "pi";
+  if (runtime === "vercel") {
+    return runEmbeddedVercelAgent(params);
+  }
   const sessionLane = resolveSessionLane(
     params.sessionKey?.trim() || params.sessionId,
   );
@@ -1790,7 +1750,7 @@ export async function runEmbeddedPiAgent(params: {
             isCompacting: () => subscription.isCompacting(),
             abort: abortRun,
           };
-          ACTIVE_EMBEDDED_RUNS.set(params.sessionId, queueHandle);
+          registerEmbeddedRun(params.sessionId, queueHandle);
 
           let abortWarnTimer: NodeJS.Timeout | undefined;
           const abortTimer = setTimeout(
@@ -1861,10 +1821,7 @@ export async function runEmbeddedPiAgent(params: {
               abortWarnTimer = undefined;
             }
             unsubscribe();
-            if (ACTIVE_EMBEDDED_RUNS.get(params.sessionId) === queueHandle) {
-              ACTIVE_EMBEDDED_RUNS.delete(params.sessionId);
-              notifyEmbeddedRunEnded(params.sessionId);
-            }
+            unregisterEmbeddedRun(params.sessionId, queueHandle);
             sessionManager.flushPendingToolResults?.();
             session.dispose();
             await sessionLock.release();
