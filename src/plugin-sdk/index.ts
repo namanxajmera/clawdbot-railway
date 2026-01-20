@@ -105,6 +105,7 @@ export {
 } from "../channels/mention-gating.js";
 export { resolveChannelMediaMaxBytes } from "../channels/plugins/media-limits.js";
 export {
+  resolveBlueBubblesGroupRequireMention,
   resolveDiscordGroupRequireMention,
   resolveIMessageGroupRequireMention,
   resolveSlackGroupRequireMention,
