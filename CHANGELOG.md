@@ -9,6 +9,8 @@ Status: unreleased.
 - Rebrand: rename the npm package/CLI to `moltbot`, add a `moltbot` compatibility shim, and move extensions to the `@moltbot/*` scope.
 - Commands: group /help and /commands output with Telegram paging. (#2504) Thanks @hougangdev.
 - macOS: limit project-local `node_modules/.bin` PATH preference to debug builds (reduce PATH hijacking risk).
+- macOS: finish Moltbot app rename for macOS sources, bundle identifiers, and shared kit paths. (#2844) Thanks @fal3.
+- Branding: update launchd labels, mobile bundle IDs, and logging subsystems to bot.molt (legacy com.clawdbot migrations). Thanks @thewilloftheshadow.
 - Tools: add per-sender group tool policies and fix precedence. (#1757) Thanks @adam91holt.
 - Agents: summarize dropped messages during compaction safeguard pruning. (#2509) Thanks @jogi47.
 - Skills: add multi-image input support to Nano Banana Pro skill. (#1958) Thanks @tyler6204.
@@ -55,23 +57,29 @@ Status: unreleased.
 - Telegram: keep topic IDs in restart sentinel notifications. (#1807) Thanks @hsrvc.
 - Telegram: add optional silent send flag (disable notifications). (#2382) Thanks @Suksham-sharma.
 - Telegram: support editing sent messages via message(action="edit"). (#2394) Thanks @marcelomar21.
+- Telegram: support quote replies for message tool and inbound context. (#2900) Thanks @aduk059.
 - Telegram: add sticker receive/send with vision caching. (#2629) Thanks @longjos.
 - Telegram: send sticker pixels to vision models. (#2650)
 - Config: apply config.env before ${VAR} substitution. (#1813) Thanks @spanishflu-est1918.
 - Slack: clear ack reaction after streamed replies. (#2044) Thanks @fancyboi999.
 - macOS: keep custom SSH usernames in remote target. (#2046) Thanks @algal.
+- CLI: use Node's module compile cache for faster startup. (#2808) Thanks @pi0.
 
 ### Breaking
 - **BREAKING:** Gateway auth mode "none" is removed; gateway now requires token/password (Tailscale Serve identity still allowed).
 
 ### Fixes
+- Agents: prevent retries on oversized image errors and surface size limits. (#2871) Thanks @Suksham-sharma.
+- Agents: inherit provider baseUrl/api for inline models. (#2740) Thanks @lploc94.
 - Memory Search: keep auto provider model defaults and only include remote when configured. (#2576) Thanks @papago2355.
 - macOS: auto-scroll to bottom when sending a new message while scrolled up. (#2471) Thanks @kennyklee.
+- Web UI: auto-expand the chat compose textarea while typing (with sensible max height). (#2950) Thanks @shivamraut101.
 - Gateway: suppress AbortError and transient network errors in unhandled rejections. (#2451) Thanks @Glucksberg.
 - TTS: keep /tts status replies on text-only commands and avoid duplicate block-stream audio. (#2451) Thanks @Glucksberg.
 - Security: pin npm overrides to keep tar@7.5.4 for install toolchains.
 - Security: properly test Windows ACL audit for config includes. (#2403) Thanks @dominicnunez.
 - CLI: recognize versioned Node executables when parsing argv. (#2490) Thanks @David-Marsh-Photo.
+- CLI: avoid prompting for gateway runtime under the spinner. (#2874)
 - BlueBubbles: coalesce inbound URL link preview messages. (#1981) Thanks @tyler6204.
 - Cron: allow payloads containing "heartbeat" in event filter. (#2219) Thanks @dwfinkelstein.
 - CLI: avoid loading config for global help/version while registering plugin commands. (#2212) Thanks @dial481.

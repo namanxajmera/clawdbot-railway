@@ -8,17 +8,17 @@ plugins {
 }
 
 android {
-  namespace = "com.clawdbot.android"
+  namespace = "bot.molt.android"
   compileSdk = 36
 
   sourceSets {
     getByName("main") {
-      assets.srcDir(file("../../shared/ClawdbotKit/Sources/ClawdbotKit/Resources"))
+      assets.srcDir(file("../../shared/MoltbotKit/Sources/MoltbotKit/Resources"))
     }
   }
 
   defaultConfig {
-    applicationId = "com.clawdbot.android"
+    applicationId = "bot.molt.android"
     minSdk = 31
     targetSdk = 36
     versionCode = 202601260
