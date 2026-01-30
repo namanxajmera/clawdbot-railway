@@ -34,6 +34,6 @@ ENV NODE_ENV=production
 
 # Railway-specific: default gateway config
 RUN mkdir -p /root/.clawdbot && \
-    echo '{"gateway":{"mode":"local","bind":"lan","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /root/.clawdbot/moltbot.json
+    echo '{"gateway":{"mode":"local","bind":"0.0.0.0","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /root/.clawdbot/moltbot.json
 
-ENTRYPOINT ["sh", "-c", "DIR=${CLAWDBOT_STATE_DIR:-/root/.clawdbot}; mkdir -p \"$DIR\"; [ -f \"$DIR/moltbot.json\" ] || cp /root/.clawdbot/moltbot.json \"$DIR/moltbot.json\"; exec node dist/index.js gateway run --bind lan --allow-unconfigured"]
+ENTRYPOINT ["sh", "-c", "DIR=${CLAWDBOT_STATE_DIR:-/root/.clawdbot}; mkdir -p \"$DIR\"; [ -f \"$DIR/moltbot.json\" ] || cp /root/.clawdbot/moltbot.json \"$DIR/moltbot.json\"; exec node dist/index.js gateway run --bind 0.0.0.0 --allow-unconfigured"]
