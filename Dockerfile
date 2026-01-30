@@ -37,4 +37,4 @@ RUN mkdir -p /root/.clawdbot && \
     echo '{"gateway":{"mode":"local","bind":"lan","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /root/.clawdbot/moltbot.json
 
 # Fix stale config: delete old config and write fresh one
-ENTRYPOINT ["sh", "-c", "mkdir -p /data/.clawdbot; rm -f /data/.clawdbot/moltbot.json; echo '{\"gateway\":{\"mode\":\"local\",\"bind\":\"lan\",\"trustedProxies\":[\"100.64.0.0/10\",\"10.0.0.0/8\"],\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.clawdbot/moltbot.json; exec node dist/index.js gateway run --bind 0.0.0.0 --port $PORT --allow-unconfigured"]
+ENTRYPOINT ["sh", "-c", "mkdir -p /data/.clawdbot; rm -f /data/.clawdbot/moltbot.json; echo '{\"gateway\":{\"mode\":\"local\",\"bind\":\"lan\",\"trustedProxies\":[\"100.64.0.0/10\",\"10.0.0.0/8\"],\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.clawdbot/moltbot.json; exec node dist/index.js gateway run --bind lan --port $PORT --allow-unconfigured"]
