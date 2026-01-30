@@ -36,5 +36,5 @@ ENV NODE_ENV=production
 RUN mkdir -p /root/.clawdbot && \
     echo '{"gateway":{"mode":"local","bind":"0.0.0.0","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /root/.clawdbot/moltbot.json
 
-# Fix stale config: always write fresh config to both possible locations
-ENTRYPOINT ["sh", "-c", "mkdir -p /data/.clawdbot /root/.clawdbot; cp /root/.clawdbot/moltbot.json /data/.clawdbot/moltbot.json 2>/dev/null || true; exec node dist/index.js gateway run --bind 0.0.0.0 --allow-unconfigured"]
+# Fix stale config: delete old config and write fresh one
+ENTRYPOINT ["sh", "-c", "mkdir -p /data/.clawdbot; rm -f /data/.clawdbot/moltbot.json; echo '{\"gateway\":{\"mode\":\"local\",\"bind\":\"0.0.0.0\",\"trustedProxies\":[\"100.64.0.0/10\",\"10.0.0.0/8\"],\"controlUi\":{\"allowInsecureAuth\":true}}}' > /data/.clawdbot/moltbot.json; exec node dist/index.js gateway run --bind 0.0.0.0 --allow-unconfigured"]
