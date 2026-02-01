@@ -2,6 +2,7 @@
 summary: "Security considerations and threat model for running an AI gateway with shell access"
 read_when:
   - Adding features that widen access or automation
+title: "Security"
 ---
 
 # Security 🔒
@@ -40,7 +41,7 @@ Start with the smallest access that still works, then widen it as you gain confi
 
 - **Inbound access** (DM policies, group policies, allowlists): can strangers trigger the bot?
 - **Tool blast radius** (elevated tools + open rooms): could prompt injection turn into shell/file/network actions?
-- **Network exposure** (Gateway bind/auth, Tailscale Serve/Funnel).
+- **Network exposure** (Gateway bind/auth, Tailscale Serve/Funnel, weak/short auth tokens).
 - **Browser control exposure** (remote nodes, relay ports, remote CDP endpoints).
 - **Local disk hygiene** (permissions, symlinks, config includes, “synced folder” paths).
 - **Plugins** (extensions exist without an explicit allowlist).
