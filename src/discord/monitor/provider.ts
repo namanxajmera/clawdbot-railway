@@ -27,6 +27,7 @@ import { resolveDiscordChannelAllowlist } from "../resolve-channels.js";
 import { resolveDiscordUserAllowlist } from "../resolve-users.js";
 import { normalizeDiscordToken } from "../token.js";
 import { createExecApprovalButton, DiscordExecApprovalHandler } from "./exec-approvals.js";
+import { registerGateway, unregisterGateway } from "./gateway-registry.js";
 import {
   DiscordMessageListener,
   DiscordPresenceListener,
@@ -503,7 +504,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
     [
       new GatewayPlugin({
         reconnect: {
-          maxAttempts: Number.POSITIVE_INFINITY,
+          maxAttempts: 50,
         },
         intents: resolveDiscordGatewayIntents(discordCfg.intents),
         autoInteractions: true,
@@ -591,6 +592,9 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
   }
 
   const gateway = client.getPlugin<GatewayPlugin>("gateway");
+  if (gateway) {
+    registerGateway(account.accountId, gateway);
+  }
   const gatewayEmitter = getDiscordGatewayEmitter(gateway);
   const stopGatewayLogging = attachDiscordGatewayLogging({
     emitter: gatewayEmitter,
@@ -657,6 +661,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       },
     });
   } finally {
+    unregisterGateway(account.accountId);
     stopGatewayLogging();
     if (helloTimeoutId) {
       clearTimeout(helloTimeoutId);

@@ -24,16 +24,22 @@ COPY scripts ./scripts
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
+RUN pnpm build
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
 ENV OPENCLAW_PREFER_PNPM=1
-RUN echo "auto-install-peers=false" >> .npmrc && pnpm ui:install
 RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
 # Railway-specific: default gateway config
-RUN mkdir -p /root/.clawdbot && \
-    echo '{"gateway":{"mode":"local","bind":"lan","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /root/.clawdbot/moltbot.json
+RUN mkdir -p /home/node/.openclaw && \
+    echo '{"gateway":{"mode":"local","bind":"lan","trustedProxies":["100.64.0.0/10","10.0.0.0/8"],"controlUi":{"allowInsecureAuth":true}}}' > /home/node/.openclaw/openclaw.json
 
-ENTRYPOINT ["sh", "-c", "DIR=${CLAWDBOT_STATE_DIR:-/root/.clawdbot}; mkdir -p \"$DIR\"; [ -f \"$DIR/moltbot.json\" ] || cp /root/.clawdbot/moltbot.json \"$DIR/moltbot.json\"; exec node dist/index.js gateway run --bind lan --allow-unconfigured"]
+# Allow non-root user to write temp files during runtime/tests.
+RUN chown -R node:node /app /home/node/.openclaw
+
+# Security hardening: Run as non-root user
+USER node
+
+# Start gateway server bound to LAN for Railway container networking.
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured", "--bind", "lan"]
