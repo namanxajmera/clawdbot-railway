@@ -63,6 +63,7 @@ export async function runAgentTurnWithFallback(params: {
     minChars: number;
     maxChars: number;
     breakPreference: "paragraph" | "newline" | "sentence";
+    flushOnParagraph?: boolean;
   };
   resolvedBlockStreamingBreak: "text_end" | "message_end";
   applyReplyToMode: (payload: ReplyPayload) => ReplyPayload;
@@ -126,7 +127,9 @@ export async function runAgentTurnWithFallback(params: {
         if (!text) {
           return { skip: true };
         }
-        const sanitized = sanitizeUserFacingText(text);
+        const sanitized = sanitizeUserFacingText(text, {
+          errorContext: Boolean(payload.isError),
+        });
         if (!sanitized.trim()) {
           return { skip: true };
         }
@@ -171,24 +174,28 @@ export async function runAgentTurnWithFallback(params: {
               },
             });
             const cliSessionId = getCliSessionId(params.getActiveSessionEntry(), provider);
-            return runCliAgent({
-              sessionId: params.followupRun.run.sessionId,
-              sessionKey: params.sessionKey,
-              sessionFile: params.followupRun.run.sessionFile,
-              workspaceDir: params.followupRun.run.workspaceDir,
-              config: params.followupRun.run.config,
-              prompt: params.commandBody,
-              provider,
-              model,
-              thinkLevel: params.followupRun.run.thinkLevel,
-              timeoutMs: params.followupRun.run.timeoutMs,
-              runId,
-              extraSystemPrompt: params.followupRun.run.extraSystemPrompt,
-              ownerNumbers: params.followupRun.run.ownerNumbers,
-              cliSessionId,
-              images: params.opts?.images,
-            })
-              .then((result) => {
+            return (async () => {
+              let lifecycleTerminalEmitted = false;
+              try {
+                const result = await runCliAgent({
+                  sessionId: params.followupRun.run.sessionId,
+                  sessionKey: params.sessionKey,
+                  agentId: params.followupRun.run.agentId,
+                  sessionFile: params.followupRun.run.sessionFile,
+                  workspaceDir: params.followupRun.run.workspaceDir,
+                  config: params.followupRun.run.config,
+                  prompt: params.commandBody,
+                  provider,
+                  model,
+                  thinkLevel: params.followupRun.run.thinkLevel,
+                  timeoutMs: params.followupRun.run.timeoutMs,
+                  runId,
+                  extraSystemPrompt: params.followupRun.run.extraSystemPrompt,
+                  ownerNumbers: params.followupRun.run.ownerNumbers,
+                  cliSessionId,
+                  images: params.opts?.images,
+                });
+
                 // CLI backends don't emit streaming assistant events, so we need to
                 // emit one with the final text so server-chat can populate its buffer
                 // and send the response to TUI/WebSocket clients.
@@ -200,6 +207,7 @@ export async function runAgentTurnWithFallback(params: {
                     data: { text: cliText },
                   });
                 }
+
                 emitAgentEvent({
                   runId,
                   stream: "lifecycle",
@@ -209,9 +217,10 @@ export async function runAgentTurnWithFallback(params: {
                     endedAt: Date.now(),
                   },
                 });
+                lifecycleTerminalEmitted = true;
+
                 return result;
-              })
-              .catch((err) => {
+              } catch (err) {
                 emitAgentEvent({
                   runId,
                   stream: "lifecycle",
@@ -219,11 +228,28 @@ export async function runAgentTurnWithFallback(params: {
                     phase: "error",
                     startedAt,
                     endedAt: Date.now(),
-                    error: err instanceof Error ? err.message : String(err),
+                    error: String(err),
                   },
                 });
+                lifecycleTerminalEmitted = true;
                 throw err;
-              });
+              } finally {
+                // Defensive backstop: never let a CLI run complete without a terminal
+                // lifecycle event, otherwise downstream consumers can hang.
+                if (!lifecycleTerminalEmitted) {
+                  emitAgentEvent({
+                    runId,
+                    stream: "lifecycle",
+                    data: {
+                      phase: "error",
+                      startedAt,
+                      endedAt: Date.now(),
+                      error: "CLI run completed without lifecycle terminal event",
+                    },
+                  });
+                }
+              }
+            })();
           }
           const authProfileId =
             provider === params.followupRun.run.provider
@@ -232,6 +258,7 @@ export async function runAgentTurnWithFallback(params: {
           return runEmbeddedPiAgent({
             sessionId: params.followupRun.run.sessionId,
             sessionKey: params.sessionKey,
+            agentId: params.followupRun.run.agentId,
             messageProvider: params.sessionCtx.Provider?.trim().toLowerCase() || undefined,
             agentAccountId: params.sessionCtx.AccountId,
             messageTo: params.sessionCtx.OriginatingTo ?? params.sessionCtx.To,

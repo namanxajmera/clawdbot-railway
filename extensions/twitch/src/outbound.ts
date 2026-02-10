@@ -64,7 +64,6 @@ export const twitchOutbound: ChannelOutboundAdapter = {
           return { ok: true, to: normalizedTo };
         }
         // Fallback to first allowFrom entry
-        // biome-ignore lint/style/noNonNullAssertion: length > 0 check ensures element exists
         return { ok: true, to: allowList[0] };
       }
 
@@ -74,7 +73,6 @@ export const twitchOutbound: ChannelOutboundAdapter = {
 
     // No target provided, use allowFrom fallback
     if (allowList.length > 0) {
-      // biome-ignore lint/style/noNonNullAssertion: length > 0 check ensures element exists
       return { ok: true, to: allowList[0] };
     }
 
@@ -106,7 +104,8 @@ export const twitchOutbound: ChannelOutboundAdapter = {
    * });
    */
   sendText: async (params: ChannelOutboundContext): Promise<OutboundDeliveryResult> => {
-    const { cfg, to, text, accountId, signal } = params;
+    const { cfg, to, text, accountId } = params;
+    const signal = (params as { signal?: AbortSignal }).signal;
 
     if (signal?.aborted) {
       throw new Error("Outbound delivery aborted");
@@ -144,7 +143,6 @@ export const twitchOutbound: ChannelOutboundAdapter = {
       channel: "twitch",
       messageId: result.messageId,
       timestamp: Date.now(),
-      to: normalizeTwitchChannel(channel),
     };
   },
 
@@ -167,7 +165,8 @@ export const twitchOutbound: ChannelOutboundAdapter = {
    * });
    */
   sendMedia: async (params: ChannelOutboundContext): Promise<OutboundDeliveryResult> => {
-    const { text, mediaUrl, signal } = params;
+    const { text, mediaUrl } = params;
+    const signal = (params as { signal?: AbortSignal }).signal;
 
     if (signal?.aborted) {
       throw new Error("Outbound delivery aborted");
